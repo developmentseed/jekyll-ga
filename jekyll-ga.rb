@@ -12,7 +12,6 @@ module Jekyll
     safe true
     priority :highest
 
-
     def generate(site)
       if !site.config['jekyll_ga']
         return
