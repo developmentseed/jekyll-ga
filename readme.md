@@ -1,6 +1,6 @@
 # jekyll-ga
 
-A Jekyll plugin that downloads Google Analytics data and adds it to posts. The Google Analytics metric can be used in templates through a Liquid tag. Optionally, posts can be sorted based on the metric instead of the default chronological sort. This is useful for making a site that lists "most popular" content.
+A Jekyll plugin that downloads Google Analytics data and adds it to posts. The Google Analytics metric is added to each post's metadata and is accessible as `post._ga`. It can be printed in a template, or optionally, posts can be sorted based on the metric instead of the default reverse chronological order. This is useful for making a site that lists "most popular" content.
 
 ## Installation
 
@@ -57,3 +57,19 @@ The `metric` value is what you want to measure from your Google Analytics data. 
 The `segment` and `filters` keys are optional parameters for your query. See the [Google Analytics Query Explorer](http://ga-dev-tools.appspot.com/explorer/?csw=1) for a description of how to use them, or just leave them out.
 
 The `sort` key can be `true` or `false`. If `true`, your posts will be sorted first by your Google Analytics metic, then chronologically as is the default. If `false` or not specified, your posts will sort as usual.
+
+## Advanced sorting
+
+This plugin compliments [Jekyll-Sort](https://github.com/krazykylep/Jekyll-Sort), so you can use your Google Analytics metric with a Jekyll-Sort rule by adding the following to `_config.yml`:
+
+```yml
+jekyll_ga:
+  sort: false
+jekyll_sort:
+  - src: posts
+    by: _ga
+    direction: down
+    dest: posts_popular
+```
+
+This allows you to have your site sorted normally (by reverse chronology) and also have a special `site.posts_popular` list of posts sorted by the specificed Google Analytics metric.
