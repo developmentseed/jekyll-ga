@@ -10,6 +10,8 @@ module Jekyll
 
   class GoogleAnalytics < Generator
     safe true
+    priority :highest
+
 
     def generate(site)
       if !site.config['jekyll_ga']
@@ -50,9 +52,9 @@ module Jekyll
       response = client.execute(:api_method => analytics.data.ga.get, :parameters => params)
       results = Hash[response.data.rows]
 
-      site.site_payload["site"]["posts"].each { |post| 
+      site.posts.each { |post|
         if results[post.url + '/']
-          post.data['_ga'] ||= results[post.url + '/']
+          post.data.merge!("_ga" => results[post.url + '/'].to_i)
         end
       }
     end
@@ -68,7 +70,7 @@ module Jekyll
       end
 
       if self.data['_ga'] && other.data['_ga']
-        cmp = self.data['_ga'].to_i <=> other.data['_ga'].to_i
+        cmp = self.data['_ga'] <=> other.data['_ga']
       end
       if !cmp || 0 == cmp
         cmp = self.date <=> other.date
