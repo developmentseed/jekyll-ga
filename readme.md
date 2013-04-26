@@ -13,7 +13,7 @@ $ sudo gem install google-api-client
 
 Copy `jekyll-ga.rb` to a `/_plugins/` directory in the root of your Jekyll site repository.
 
-The `jekyll-ga` plugin is only tested to work with Jekyll 0.11.2 and Ruby 1.8.7, but it may work with other versions.
+The `jekyll-ga` plugin is only tested to work with Jekyll 0.12.0 and Ruby 1.8.7, but it may work with other versions.
 
 ### Set up a service account for the Google data API
 
