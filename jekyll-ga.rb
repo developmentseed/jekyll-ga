@@ -60,8 +60,11 @@ module Jekyll
           url = post.url
         end
         if results[url]
-          post.data.merge!("_ga" => results[url].to_i)
+          _ga = results[url].to_i
+        else
+          _ga = 0
         end
+        post.data.merge!("_ga" => _ga)
       }
     end
   end
