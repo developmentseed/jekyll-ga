@@ -52,9 +52,19 @@ module Jekyll
       results = Hash[response.data.rows]
 
       site.posts.each { |post|
-        if results[post.url + '/']
-          post.data.merge!("_ga" => results[post.url + '/'].to_i)
+        if site.config['permalink'] == 'pretty' || site.config['permalink'].end_with?('/')
+          url = post.url + 'index.html'
+        elsif !site.confi['permalink'].end_with?('/')
+          url = post.url + 'index'
+        else
+          url = post.url
         end
+        if results[url]
+          _ga = results[url].to_i
+        else
+          _ga = 0
+        end
+        post.data.merge!("_ga" => _ga)
       }
     end
   end
