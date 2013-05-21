@@ -52,9 +52,8 @@ module Jekyll
       results = Hash[response.data.rows]
 
       site.posts.each { |post|
-        if results[post.url + '/']
-          post.data.merge!("_ga" => results[post.url + '/'].to_i)
-        end
+        url = (site.config['baseurl'] || '') + post.url + '/'
+        post.data.merge!("_ga" => (results[url]) ? results[url].to_i : 0)
       }
     end
   end
