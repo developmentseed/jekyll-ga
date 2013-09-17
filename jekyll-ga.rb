@@ -37,7 +37,7 @@ module Jekyll
         'ids' => ga['profileID'],
         'start-date' => Chronic.parse(ga['start']).strftime("%Y-%m-%d"),
         'end-date' => Chronic.parse(ga['end']).strftime("%Y-%m-%d"),
-        'dimensions' => "ga:pagePath",
+        'dimensions' => ga['dimensions'],
         'metrics' => ga['metric'],
         'max-results' => 10000
       }
