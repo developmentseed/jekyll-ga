@@ -36,8 +36,6 @@ module Jekyll
       if not Dir.exist?(cache_directory)
         Dir.mkdir(cache_directory)
       end
-        
-      Jekyll.logger.info "GA-debug: ", ga["debug"]
 
       # Now lets check for the cache file and how old it is
       if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and !ga["debug"]
@@ -51,17 +49,26 @@ module Jekyll
           
         analytics.authorization = auth
           
+        # Jekyll.logger.info "GA-debug: ", site.static_files.to_json
+        # Jekyll.logger.info "GA-debug: ", site.class.to_s
+        Jekyll.logger.info "GA-debug (pages): ", site.pages.select { |page| page.name.include? ".html" }.collect { |page| page.dir + page.name }
+        Jekyll.logger.info "GA-debug (posts): ", site.posts.docs.collect { |doc| doc.url.to_s }
+          
+        # With this we can collect all paths into "ga:pagePath==xxx" array of strings (after merging this two arrays)
+        # Jekyll.logger.info "GA-debug (layouts): ", site.layouts[0].class.to_s #.to_json #.collect { |layout| layout.name }
+          
         # def get_ga_data(ids, start_date, end_date, metrics, dimensions: nil, filters: nil, include_empty_rows: nil, max_results: nil, output: nil, sampling_level: nil, segment: nil, sort: nil, start_index: nil, fields: nil, quota_user: nil, user_ip: nil, options: nil, &block)
 
         # Get the response
-        #                                                                                                                                                                              ga['filters']
         response = analytics.get_ga_data(
             ga['profileID'], # ids
             Chronic.parse(ga['start']).strftime("%Y-%m-%d"), # start_date
             Chronic.parse(ga['end']).strftime("%Y-%m-%d"),   # end_date
             ga['metric'],  # metrics
-            dimensions: "ga:pagePath", # dimensions
-            filters: "ga:pagePath==/", # filters
+            dimensions: "ga:pagePath",
+            filters: ga["filters"].to_s.empty? ? "ga:pagePath==/,ga:pagePath==/es/" : ga["filters"].to_s, # TODO: gsub of :current_url (for this I'll need to load it on a < Page or < PageReader, I'll need to debug)
+                                                                                                          #       this will be a slow impl, so I'll search if is allowed to put all pages on the same filters string (so the macro will be called :url) (https://stackoverflow.com/a/22689880/3286975)
+                                                                                                          # "ga:pagePath==/,ga:pagePath==/es/" works as expected, so I have to recover all pages, I will not use the macro
             include_empty_rows: nil,
             max_results: 10000, 
             output: nil, 
@@ -86,6 +93,10 @@ module Jekyll
           f.write(response_data.to_json)
         end
           
+        endTime = Time.now - startTime
+
+        Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
+          
         Jekyll.logger.info "Jekyll GoogleAnalytics:",response_data.to_json
 
         # Debug statments (TODO: implement a tag for this)
@@ -93,10 +104,6 @@ module Jekyll
         # https://stackoverflow.com/questions/27936532/400-invalid-value-gapagepath-for-filters-parameter
         if response_data.kind_of?(Array) and response_data.include? "rows"
             results = response_data["rows"]
-
-            endTime = Time.now - startTime
-
-            Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
 
             if ga["debug"]
                 Jekyll.logger.info "Jekyll GoogleAnalytics:",response_data.to_json
