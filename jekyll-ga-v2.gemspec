@@ -8,10 +8,10 @@ Gem::Specification.new do |spec|
   spec.name          = "jekyll-ga-v2"
   spec.summary       = "Jekyll Google Analytics integration"
   spec.description   = "Google Analytics support in Jekyll blog to easily show the statistics on your website"
-  spec.version       = Jekyll::Patreon::VERSION
+  spec.version       = Jekyll::GoogleAnalyticsV2::VERSION
   spec.authors       = ["z3nth10n"]
   spec.email         = ["z3nth10n@gmail.com"]
-  spec.homepage      = "https://github.com/uta-org/jekyll-patreon"
+  spec.homepage      = "https://github.com/uta-org/jekyll-ga-v2"
   spec.licenses      = ["MIT"]
     
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r!^(test|spec|features|assets|versions)/!) }
