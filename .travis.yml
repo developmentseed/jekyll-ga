@@ -1,0 +1,11 @@
+deploy:
+  provider: rubygems
+  gem: jekyll-patreon
+  on:
+    tags: true
+    all_branches: true
+    repo: uta-org/jekyll-patreon
+language: ruby
+rvm:
+  - 2.3.1
+script: JEKYLL_ENV="production" bundle exec rspec spec
