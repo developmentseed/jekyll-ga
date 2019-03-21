@@ -11,14 +11,16 @@ module Jekyll
 
   class GoogleAnalytics < Generator
     priority :highest
+      
+    @@response_data = nil
 
-    def generate(site)
-      Jekyll.logger.info "Jekyll GA:","Initializating"
-      startTime = Time.now
-        
-      if !site.config['jekyll_ga']
+    def generate(site)    
+      unless site.config['jekyll_ga']
         return
       end
+        
+      Jekyll.logger.info "Jekyll GA:","Initializating"
+      startTime = Time.now
 
       # Set "ga" to store the current config
       ga = site.config['jekyll_ga']
@@ -27,7 +29,6 @@ module Jekyll
       cache_directory = ga['cache_directory'] || "_jekyll_ga"
       cache_filename = ga['cache_filename'] || "ga_cache.json"
       cache_file_path = cache_directory + "/" + cache_filename
-      response_data = nil
 
       # Set the refresh rate in minutes (how long the program will wait before writing a new file)
       refresh_rate = ga['refresh_rate'] || 60
@@ -39,7 +40,7 @@ module Jekyll
 
       # Now lets check for the cache file and how old it is
       if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and !ga["debug"]
-        response_data = JSON.parse(File.read(cache_file_path));
+        @@response_data = JSON.parse(File.read(cache_file_path));
       else
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
           
@@ -61,18 +62,31 @@ module Jekyll
         queryString = pages.collect { |page| "ga:pagePath==#{page.to_s}" }.join(",")
         
         # Get the response
-        response = analytics.get_ga_data(
-            ga['profileID'], # ids
-            Chronic.parse(ga['start']).strftime("%Y-%m-%d"), # start_date
-            Chronic.parse(ga['end']).strftime("%Y-%m-%d"),   # end_date
-            ga['metric'],  # metrics
-            dimensions: "ga:pagePath",
-            filters: ga["filters"].to_s.empty? ? queryString : ga["filters"].to_s,
-            include_empty_rows: nil,
-            max_results: 10000, 
-            output: nil, 
-            sampling_level: nil, 
-            segment: ga['segment'])
+        response = get_response(analytics, ga, queryString)
+          
+        diff_respone = nil
+        
+        # Make another request to Google Analytics API to get the difference
+        if ga["compare_period"]
+           start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
+           end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
+            
+           if !start_date.nil?
+              Jekyll.logger.info "GA-debug (start_date): ", start_date.to_s 
+           end
+
+           if !end_date.nil?
+              Jekyll.logger.info "GA-debug (end_date): ", end_date.to_s 
+           end
+            
+           diff_date = end_date.to_date - start_date.to_date
+            
+           # if !diff_date.nil?
+           #      Jekyll.logger.info "GA-debug (diff_date): ", diff_date.to_s
+           # end
+            
+           diff_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date.numerator.to_i, start_date) 
+        end
 
         # If there are errors then show them
         if response.kind_of?(Array) and response.include? "error"
@@ -85,32 +99,55 @@ module Jekyll
             raise RuntimeError, "Check errors from Google Analytics"
         end
 
-        response_data = response
+        @@response_data = response
 
         # Write the response data
         File.open(cache_file_path, "w") do |f|
-          f.write(response_data.to_json)
+          f.write(@@response_data.to_json)
         end
           
         endTime = Time.now - startTime
 
         Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
           
-        Jekyll.logger.info "Jekyll GoogleAnalytics:",response_data.to_json
+        Jekyll.logger.info "Jekyll GoogleAnalytics:",@@response_data.to_json
 
         # Debug statments (TODO: implement a tag for this)
         # Implement a macro to use in the ga[filters] called :currentUrl (ga:pagePath=@/my/url) (from: https://stackoverflow.com/questions/46039271/google-analytics-api-get-page-views-by-url)
         # https://stackoverflow.com/questions/27936532/400-invalid-value-gapagepath-for-filters-parameter
-        if response_data.kind_of?(Array) and response_data.include? "rows"
-            results = response_data["rows"]
+        if @@response_data.kind_of?(Array) and @@response_data.include? "rows"
+            results = @@response_data["rows"]
 
             if ga["debug"]
-                Jekyll.logger.info "Jekyll GoogleAnalytics:",response_data.to_json
+                Jekyll.logger.info "Jekyll GoogleAnalytics:", @@response_data.to_json
             end
         end
           
       end
         
+    end
+      
+    def get_response(analytics, ga, queryString, tstart = nil, tend = nil)
+       if !tstart.nil?
+          Jekyll.logger.info "GA-debug (tstart): ", tstart.to_s 
+       end
+        
+       if !tend.nil?
+          Jekyll.logger.info "GA-debug (tend): ", tend.to_s 
+       end
+    
+       return analytics.get_ga_data(
+                ga['profileID'], # ids
+                tstart.nil? ? Chronic.parse(ga['start']).strftime("%Y-%m-%d") : tstart.to_s, # start_date
+                tend.nil? ? Chronic.parse(ga['end']).strftime("%Y-%m-%d") : tend.to_s,   # end_date
+                ga['metrics'],  # metrics
+                dimensions: ga['dimensions'],
+                filters: ga["filters"].to_s.empty? ? queryString : ga["filters"].to_s,
+                include_empty_rows: nil,
+                max_results: ga["max_results"].nil? ? 10000 : ga["max_results"].to_i, 
+                output: nil, 
+                sampling_level: nil, 
+                segment: ga['segment']) 
     end
       
     def filter_url(url)
@@ -123,6 +160,10 @@ module Jekyll
         end
         
         return url
+    end
+      
+    def get_data
+       @@response_data 
     end
   end
 end
