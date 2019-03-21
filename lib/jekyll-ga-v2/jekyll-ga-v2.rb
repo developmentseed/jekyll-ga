@@ -156,9 +156,11 @@ module Jekyll
         end
 
         # Write the response data
-        File.open(cache_file_path, "w") do |f|
-          f.write(JSON.pretty_generate(store_data))
-        end          
+        if ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and ga["debug"] or !ga["debug"]
+            File.open(cache_file_path, "w") do |f|
+              f.write(JSON.pretty_generate(store_data))
+            end
+        end
       end
         
       # Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@response_data.to_json
