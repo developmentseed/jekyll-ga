@@ -13,7 +13,8 @@ module Jekyll
     priority :highest
       
     @@response_data = nil
-    @diff_response = nil
+    @past_response = nil
+    @headers = nil
 
     def generate(site)    
       unless site.config['jekyll_ga']
@@ -65,13 +66,13 @@ module Jekyll
         # Get the response
         response = get_response(analytics, ga, queryString)
         
-        # Make another request to Google Analytics API to get the difference
+        # Make another request to Google Analytics API to get the pasterence
         if ga["compare_period"]
            start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
-           diff_date = end_date.to_date - start_date.to_date            
-           @diff_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date.numerator.to_i, start_date) 
+           past_date = end_date.to_date - start_date.to_date            
+           @past_response = get_response(analytics, ga, queryString, start_date.to_date - past_date.numerator.to_i, start_date) 
         end
 
         # If there are errors then show them
@@ -87,7 +88,7 @@ module Jekyll
 
         @@response_data = response
           
-        Jekyll.logger.info "GA-debug (type): ", response.class.to_s
+        # Jekyll.logger.info "GA-debug (type): ", response.class.to_s
 
         # Write the response data
         File.open(cache_file_path, "w") do |f|
@@ -110,19 +111,39 @@ module Jekyll
       Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@@response_data.to_json
         
       # Get keys from columnHeaders
-      headers = @@response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
-      Jekyll.logger.info "GA-debug (headers): ", headers
         
-      # Loop through pages && posts to add indexer value
+      @headers = @@response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
+      # Jekyll.logger.info "GA-debug (headers): ", headers
+        
+      # Loop through pages && posts to add the stats object value
         
       site.pages.each { |page|
-          page.data["statistics"] = get_data_for("page", page, headers)
-          Jekyll.logger.info "GA-debug (stats): ", page.data["statistics"]
+          stats_data = get_stats_for("page", page)
+          page.data["stats"] = stats_data
+          
+          # Jekyll.logger.info "GA-debug (stats-type): ", page.data["statistics"].class.to_s
+          
+          unless stats_data.nil? and ga["debug"]
+            Jekyll.logger.info "GA-debug (page-stats): ", page.data["stats"].to_json
+          end
       }
         
       site.posts.docs.each { |post|
-          post.data["statistics"] = "bie"
+          stats_data = get_stats_for("post", post)
+          post.data["stats"] = stats_data
+          
+          unless stats_data.nil? and ga["debug"]
+            Jekyll.logger.info "GA-debug (post-stats): ", post.data["stats"].to_json
+          end
       }
+    
+      # Do the same for the site
+      stats_data = get_stats_for("site")
+      site.data["stats"] = stats_data
+    
+      unless stats_data.nil? and ga["debug"]
+        Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
+      end
         
       endTime = Time.now - startTime
 
@@ -130,21 +151,24 @@ module Jekyll
         
     end
       
-    def get_data_for(page_type, inst, headers)
+    def get_stats_for(page_type, inst = nil)
        data = nil
        past_data = nil
         
-       # Jekyll.logger.info "GA-debug (diff): ", @diff_response.to_json
+       # Jekyll.logger.info "GA-debug (past): ", @past_response.to_json
     
        # Transpose array into hash using columnHeaders    
        if page_type == "page"
           # Jekyll.logger.info "GA-debug: ", "Parsing data from page"
            
-          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
-          past_data = @diff_response.nil? or !@diff_response.nil? and @diff_response.rows.nil? ? nil : @diff_response.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
+          past_data = @past_response.nil? or !@past_response.nil? and @past_response.rows.nil? ? nil : @past_response.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
        elsif page_type == "post"
-          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
-          past_data = @diff_response.nil? or !@diff_response.nil? and @diff_response.rows.nil? ? nil : @diff_response.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
+          past_data = @past_response.nil? or !@past_response.nil? and @past_response.rows.nil? ? nil : @past_response.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
+       elsif page_type == "site"
+          data = get_site_data(false)
+          past_data = get_site_data(true)
        end
         
        if data.nil?
@@ -152,20 +176,28 @@ module Jekyll
            return nil
        end
         
-       pre_data = {}    
+       pre_data = {}
+        
+       # Jekyll.logger.info "GA-debug (pre-data): ", data.to_json
 
        data.each { |key, value|
             present_value = value.to_f
            
-            past_value = past_data.kind_of?(Hash) and past_data.has_key?(key) ? past_data[key].to_f : 0.0
-            past_value = past_value.kind_of?(FalseClass) ? 0.0 : past_value
-            # Jekyll.logger.info "GA-debug (val): ",  #prev_data.class.to_s # prev_data.nil? or !prev_data.nil? and prev_data == false
+            past_value = nil
            
-            if float?(value)
+            if past_data.kind_of?(Hash)
+               past_value = past_data.fetch(key, 0.0).to_f
+            else
+               past_value = 0.0 
+            end
+           
+            # Jekyll.logger.info "GA-debug (#{key}): ",  past_value.class.to_s # prev_data.nil? or !prev_data.nil? and prev_data == false
+           
+            if float?(value) and float?(past_value) # Filter for pagePath (not float or integer value)
                 diff_value = present_value - past_value
                 perc_value = present_value / past_value * 100.0
                 
-                # Jekyll.logger.info "Growth for #{key}: ", "Present: #{present_value} | Past: #{past_value} | Diff: #{diff_value} | Perc: #{perc_value}"
+                # Jekyll.logger.info "Growth for #{key}: ", "Present: #{present_value} | Past: #{past_value} | past: #{past_value} | Perc: #{perc_value}"
                 # Thanks to: https://stackoverflow.com/q/31981133/3286975
                 
                 pre_data.store("diff_#{key}", diff_value)
@@ -176,6 +208,14 @@ module Jekyll
        data.merge!(pre_data)
         
        return data
+    end
+      
+    def get_site_data(is_past)
+        data = (is_past ? @past_response : @@response_data).totals_for_all_results
+        
+        data.keys.each { |k| data[k.sub("ga:", "")] = data[k]; data.delete(k) }
+        
+        return data;
     end
       
     def get_response(analytics, ga, queryString, tstart = nil, tend = nil)
