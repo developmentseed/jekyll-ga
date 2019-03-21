@@ -71,20 +71,7 @@ module Jekyll
            start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
-           if !start_date.nil?
-              Jekyll.logger.info "GA-debug (start_date): ", start_date.to_s 
-           end
-
-           if !end_date.nil?
-              Jekyll.logger.info "GA-debug (end_date): ", end_date.to_s 
-           end
-            
-           diff_date = end_date.to_date - start_date.to_date
-            
-           # if !diff_date.nil?
-           #      Jekyll.logger.info "GA-debug (diff_date): ", diff_date.to_s
-           # end
-            
+           diff_date = end_date.to_date - start_date.to_date            
            diff_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date.numerator.to_i, start_date) 
         end
 
@@ -128,14 +115,6 @@ module Jekyll
     end
       
     def get_response(analytics, ga, queryString, tstart = nil, tend = nil)
-       if !tstart.nil?
-          Jekyll.logger.info "GA-debug (tstart): ", tstart.to_s 
-       end
-        
-       if !tend.nil?
-          Jekyll.logger.info "GA-debug (tend): ", tend.to_s 
-       end
-    
        return analytics.get_ga_data(
                 ga['profileID'], # ids
                 tstart.nil? ? Chronic.parse(ga['start']).strftime("%Y-%m-%d") : tstart.to_s, # start_date
