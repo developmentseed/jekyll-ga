@@ -6,7 +6,6 @@ require 'googleauth'
 require 'google/apis/analytics_v3'
 require 'chronic'
 require 'json'
-# require 'digest'
 
 module Jekyll
 
@@ -181,8 +180,6 @@ module Jekyll
         store_data.store("headers", new_headers)
 
         # Write the response data
-        # Jekyll.logger.info "GA-debug (minutes): ",((Time.now - File.mtime(cache_file_path)) / 60 >= refresh_rate)
-        
         if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 >= refresh_rate) and ga["debug"] or !ga["debug"] or !File.exist?(cache_file_path)
             File.open(cache_file_path, "w") do |f|
               f.write(JSON.pretty_generate(store_data))
@@ -190,16 +187,10 @@ module Jekyll
         end
       end
         
-      # Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@response_data.to_json
-        
       endTime = Time.now - startTime
 
       Jekyll.logger.info "Jekyll GoogleAnalytics:", "Initializated in #{endTime} seconds"
     end
-      
-    # def get_md5_sum(filepath)
-    #     return Digest::MD5.hexdigest(File.read(filepath))
-    # end
       
     def get_identifier_for(page_type, inst)
         if page_type == "page"
