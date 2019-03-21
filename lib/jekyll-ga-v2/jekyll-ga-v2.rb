@@ -47,28 +47,19 @@ module Jekyll
         auth = ::Google::Auth::ServiceAccountCredentials
             .make_creds(scope: 'https://www.googleapis.com/auth/analytics')
           
+        # Assign auth
         analytics.authorization = auth
           
-        # Jekyll.logger.info "GA-debug: ", site.static_files.to_json
-        # Jekyll.logger.info "GA-debug: ", site.class.to_s
-        
+        # Get pages && posts from site (filtering its urls)        
         pages = site.pages.select { |page| page.name.include? ".html" }.collect { |page| filter_url(page.dir + page.name) }
         posts = site.posts.docs.collect { |doc| filter_url(doc.url.to_s) }
           
-        # Jekyll.logger.info "GA-debug (pages): ", pages
-        # Jekyll.logger.info "GA-debug (posts): ", posts
-          
+        # Concat the two arrays
         pages.push(*posts)
           
+        # Create a queryString (string type) from the array
         queryString = pages.collect { |page| "ga:pagePath==#{page.to_s}" }.join(",")
-          
-        # Jekyll.logger.info "Ga-debug (QueryString): ", queryString
-          
-        # With this we can collect all paths into "ga:pagePath==xxx" array of strings (after merging this two arrays)
-        # Jekyll.logger.info "GA-debug (layouts): ", site.layouts[0].class.to_s #.to_json #.collect { |layout| layout.name }
-          
-        # def get_ga_data(ids, start_date, end_date, metrics, dimensions: nil, filters: nil, include_empty_rows: nil, max_results: nil, output: nil, sampling_level: nil, segment: nil, sort: nil, start_index: nil, fields: nil, quota_user: nil, user_ip: nil, options: nil, &block)
-
+        
         # Get the response
         response = analytics.get_ga_data(
             ga['profileID'], # ids
