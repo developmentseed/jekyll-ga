@@ -87,31 +87,59 @@ module Jekyll
         end
 
         @@response_data = response
+          
+        Jekyll.logger.info "GA-debug (type): ", response.class.to_s
 
         # Write the response data
         File.open(cache_file_path, "w") do |f|
           f.write(@@response_data.to_json)
         end
-          
-        endTime = Time.now - startTime
-
-        Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
-          
-        Jekyll.logger.info "Jekyll GoogleAnalytics:",@@response_data.to_json
 
         # Debug statments (TODO: implement a tag for this)
         # Implement a macro to use in the ga[filters] called :currentUrl (ga:pagePath=@/my/url) (from: https://stackoverflow.com/questions/46039271/google-analytics-api-get-page-views-by-url)
         # https://stackoverflow.com/questions/27936532/400-invalid-value-gapagepath-for-filters-parameter
-        if @@response_data.kind_of?(Array) and @@response_data.include? "rows"
-            results = @@response_data["rows"]
+        if @@response_data.kind_of?(Google::Apis::AnalyticsV3::GaData) and !@@response_data.rows.nil?
+            results = @@response_data.rows
 
-            if ga["debug"]
-                Jekyll.logger.info "Jekyll GoogleAnalytics:", @@response_data.to_json
-            end
+            # if ga["debug"]
+            #    Jekyll.logger.info "Jekyll GoogleAnalytics:", @@response_data.to_json
+            # end
         end
           
       end
         
+      Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@@response_data.to_json
+        
+      # Get keys from columnHeaders
+      headers = @@response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
+      Jekyll.logger.info "GA-debug (headers): ", headers
+        
+      # Loop through pages && posts to add indexer value
+        
+      site.pages.each { |page|
+          # Transpose array into hash using columnHeaders
+          page.data["statistics"] = get_data_for("page", page)
+          Jekyll.logger.info "GA-debug (stats): ", page.data["statistics"]
+      }
+        
+      site.posts.docs.each { |post|
+          post.data["statistics"] = "bie"
+      }
+        
+      endTime = Time.now - startTime
+
+      Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
+        
+    end
+      
+    def get_data_for(page_type, inst)
+       if page_type == "page"
+          return @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+       elsif page_type == "post"
+           return @@response_data.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+       end
+        
+       return nil
     end
       
     def get_response(analytics, ga, queryString, tstart = nil, tend = nil)
