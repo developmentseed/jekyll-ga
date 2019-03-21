@@ -91,7 +91,7 @@ module Jekyll
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
            diff_date = end_date.to_date - start_date.to_date
-           diff_date = diff_date.numerator.to_i
+           diff_date = diff_date.numerator.to_i - 1
             
            site.data["period"] = diff_date
            store_data.store("period", diff_date)
@@ -154,7 +154,7 @@ module Jekyll
           
         store_data.store("site-stats", stats_data)
 
-        unless stats_data.nil? and ga["debug"]
+        if !stats_data.nil? and ga["debug"]
           Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
         end
         
