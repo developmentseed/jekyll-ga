@@ -87,8 +87,6 @@ module Jekyll
         end
 
         @@response_data = response
-          
-        # Jekyll.logger.info "GA-debug (type): ", response.class.to_s
 
         # Write the response data
         File.open(cache_file_path, "w") do |f|
@@ -111,9 +109,7 @@ module Jekyll
       Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@@response_data.to_json
         
       # Get keys from columnHeaders
-        
       @headers = @@response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
-      # Jekyll.logger.info "GA-debug (headers): ", headers
         
       # Loop through pages && posts to add the stats object value
         
@@ -155,12 +151,8 @@ module Jekyll
        data = nil
        past_data = nil
         
-       # Jekyll.logger.info "GA-debug (past): ", @past_response.to_json
-    
        # Transpose array into hash using columnHeaders    
        if page_type == "page"
-          # Jekyll.logger.info "GA-debug: ", "Parsing data from page"
-           
           data = @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
           past_data = @past_response.nil? or !@past_response.nil? and @past_response.rows.nil? ? nil : @past_response.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
        elsif page_type == "post"
@@ -172,14 +164,11 @@ module Jekyll
        end
         
        if data.nil?
-           # Jekyll.logger.info "GA-debug (page_type is null): ", page_type
            return nil
        end
         
        pre_data = {}
         
-       # Jekyll.logger.info "GA-debug (pre-data): ", data.to_json
-
        data.each { |key, value|
             present_value = value.to_f
            
@@ -191,14 +180,9 @@ module Jekyll
                past_value = 0.0 
             end
            
-            # Jekyll.logger.info "GA-debug (#{key}): ",  past_value.class.to_s # prev_data.nil? or !prev_data.nil? and prev_data == false
-           
             if float?(value) and float?(past_value) # Filter for pagePath (not float or integer value)
                 diff_value = present_value - past_value
                 perc_value = present_value / past_value * 100.0
-                
-                # Jekyll.logger.info "Growth for #{key}: ", "Present: #{present_value} | Past: #{past_value} | past: #{past_value} | Perc: #{perc_value}"
-                # Thanks to: https://stackoverflow.com/q/31981133/3286975
                 
                 pre_data.store("diff_#{key}", diff_value)
                 pre_data.store("#{key}_perc", perc_value == Float::INFINITY ? "∞" : perc_value.to_s)
