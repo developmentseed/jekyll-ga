@@ -87,67 +87,80 @@ module Jekyll
         end
 
         @response_data = response
+          
+        store_data = {}
+          
+        # Get keys from columnHeaders
+        @headers = @response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
+
+        # Loop through pages && posts to add the stats object value
+          
+        page_data = {}
+        site.pages.each { |page|
+            stats_data = get_stats_for(ga, "page", page)
+            page.data["stats"] = stats_data
+            
+        
+
+            # Jekyll.logger.info "GA-debug (stats-type): ", page.data["statistics"].class.to_s
+
+            unless stats_data.nil?
+              page_data.store(get_identifier_for("page", page), stats_data)
+                
+              if ga["debug"]
+                Jekyll.logger.info "GA-debug (page-stats): ", page.data["stats"].to_json
+              end
+            end
+        }
+        store_data.store("page-stats", page_data)
+
+        post_data = {}
+        site.posts.docs.each { |post|
+            stats_data = get_stats_for(ga, "post", post)
+            post.data["stats"] = stats_data
+
+            unless stats_data.nil?
+              post_data.store(get_identifier_for("post", post), stats_data)
+                
+              if ga["debug"]
+                Jekyll.logger.info "GA-debug (post-stats): ", post.data["stats"].to_json
+              end
+            end
+        }
+        store_data.store("post-stats", post_data)
+
+        # Do the same for the site
+        stats_data = get_stats_for(ga, "site")
+        site.data["stats"] = stats_data
+          
+        store_data.store("site-stats", stats_data)
+
+        unless stats_data.nil? and ga["debug"]
+          Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
+        end
 
         # Write the response data
         File.open(cache_file_path, "w") do |f|
-          f.write(@response_data.to_json)
-        end
-
-        # Debug statments (TODO: implement a tag for this)
-        # Implement a macro to use in the ga[filters] called :currentUrl (ga:pagePath=@/my/url) (from: https://stackoverflow.com/questions/46039271/google-analytics-api-get-page-views-by-url)
-        # https://stackoverflow.com/questions/27936532/400-invalid-value-gapagepath-for-filters-parameter
-        if @response_data.kind_of?(Google::Apis::AnalyticsV3::GaData) and !@response_data.rows.nil?
-            results = @response_data.rows
-
-            # if ga["debug"]
-            #    Jekyll.logger.info "Jekyll GoogleAnalytics:", @response_data.to_json
-            # end
-        end
-          
+          f.write(JSON.pretty_generate(store_data))
+        end          
       end
         
-      Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@response_data.to_json
-        
-      # Get keys from columnHeaders
-      @headers = @response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
-        
-      # Loop through pages && posts to add the stats object value
-        
-      site.pages.each { |page|
-          stats_data = get_stats_for("page", page)
-          page.data["stats"] = stats_data
-          
-          # Jekyll.logger.info "GA-debug (stats-type): ", page.data["statistics"].class.to_s
-          
-          unless stats_data.nil? and ga["debug"]
-            Jekyll.logger.info "GA-debug (page-stats): ", page.data["stats"].to_json
-          end
-      }
-        
-      site.posts.docs.each { |post|
-          stats_data = get_stats_for("post", post)
-          post.data["stats"] = stats_data
-          
-          unless stats_data.nil? and ga["debug"]
-            Jekyll.logger.info "GA-debug (post-stats): ", post.data["stats"].to_json
-          end
-      }
-    
-      # Do the same for the site
-      stats_data = get_stats_for("site")
-      site.data["stats"] = stats_data
-    
-      unless stats_data.nil? and ga["debug"]
-        Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
-      end
+      # Jekyll.logger.info "Jekyll GoogleAnalytics (pre-prod):",@response_data.to_json
         
       endTime = Time.now - startTime
 
       Jekyll.logger.info "Jekyll GoogleAnalytics:", "Initializated in #{endTime} seconds"
-        
     end
       
-    def get_stats_for(page_type, inst = nil)
+    def get_identifier_for(page_type, inst)
+        if page_type == "page"
+            return filter_url(inst.dir + inst.name)
+        elsif page_type == "post"
+            return filter_url(inst.url.to_s)
+        end
+    end
+      
+    def get_stats_for(ga, page_type, inst = nil)
        data = nil
        past_data = nil
         
