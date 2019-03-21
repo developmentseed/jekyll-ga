@@ -13,6 +13,7 @@ module Jekyll
     priority :highest
       
     @@response_data = nil
+    @diff_response = nil
 
     def generate(site)    
       unless site.config['jekyll_ga']
@@ -63,8 +64,6 @@ module Jekyll
         
         # Get the response
         response = get_response(analytics, ga, queryString)
-          
-        diff_respone = nil
         
         # Make another request to Google Analytics API to get the difference
         if ga["compare_period"]
@@ -72,7 +71,7 @@ module Jekyll
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
            diff_date = end_date.to_date - start_date.to_date            
-           diff_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date.numerator.to_i, start_date) 
+           @diff_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date.numerator.to_i, start_date) 
         end
 
         # If there are errors then show them
@@ -117,8 +116,7 @@ module Jekyll
       # Loop through pages && posts to add indexer value
         
       site.pages.each { |page|
-          # Transpose array into hash using columnHeaders
-          page.data["statistics"] = get_data_for("page", page)
+          page.data["statistics"] = get_data_for("page", page, headers)
           Jekyll.logger.info "GA-debug (stats): ", page.data["statistics"]
       }
         
@@ -128,18 +126,56 @@ module Jekyll
         
       endTime = Time.now - startTime
 
-      Jekyll.logger.info "Jekyll GoogleAnalytics:","Initializated in #{endTime} seconds"
+      Jekyll.logger.info "Jekyll GoogleAnalytics:", "Initializated in #{endTime} seconds"
         
     end
       
-    def get_data_for(page_type, inst)
+    def get_data_for(page_type, inst, headers)
+       data = nil
+       past_data = nil
+        
+       # Jekyll.logger.info "GA-debug (diff): ", @diff_response.to_json
+    
+       # Transpose array into hash using columnHeaders    
        if page_type == "page"
-          return @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          # Jekyll.logger.info "GA-debug: ", "Parsing data from page"
+           
+          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          past_data = @diff_response.nil? or !@diff_response.nil? and @diff_response.rows.nil? ? nil : @diff_response.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
        elsif page_type == "post"
-           return @@response_data.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          data = @@response_data.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
+          past_data = @diff_response.nil? or !@diff_response.nil? and @diff_response.rows.nil? ? nil : @diff_response.rows.select { |row| row[0] == filter_url(inst.url.to_s) }.collect { |row| Hash[ [headers, row].transpose ] }[0]
        end
         
-       return nil
+       if data.nil?
+           # Jekyll.logger.info "GA-debug (page_type is null): ", page_type
+           return nil
+       end
+        
+       pre_data = {}    
+
+       data.each { |key, value|
+            present_value = value.to_f
+           
+            past_value = past_data.kind_of?(Hash) and past_data.has_key?(key) ? past_data[key].to_f : 0.0
+            past_value = past_value.kind_of?(FalseClass) ? 0.0 : past_value
+            # Jekyll.logger.info "GA-debug (val): ",  #prev_data.class.to_s # prev_data.nil? or !prev_data.nil? and prev_data == false
+           
+            if float?(value)
+                diff_value = present_value - past_value
+                perc_value = present_value / past_value * 100.0
+                
+                # Jekyll.logger.info "Growth for #{key}: ", "Present: #{present_value} | Past: #{past_value} | Diff: #{diff_value} | Perc: #{perc_value}"
+                # Thanks to: https://stackoverflow.com/q/31981133/3286975
+                
+                pre_data.store("diff_#{key}", diff_value)
+                pre_data.store("#{key}_perc", perc_value == Float::INFINITY ? "∞" : perc_value.to_s)
+            end
+       }
+        
+       data.merge!(pre_data)
+        
+       return data
     end
       
     def get_response(analytics, ga, queryString, tstart = nil, tend = nil)
@@ -171,6 +207,10 @@ module Jekyll
       
     def get_data
        @@response_data 
+    end
+      
+    def float?(string)
+      true if Float(string) rescue false
     end
   end
 end
