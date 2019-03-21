@@ -161,11 +161,13 @@ module Jekyll
         
         # Before saving modify headers
         
+        # Create a new array with the value, the diff and the perc from the last stored stats_data corresponding to the site one
         new_headers = []
         @headers.each { |header|
             unless stats_data[header].nil?            
                 protoheader = {}
 
+                protoheader.store("name", header)
                 protoheader.store("value", stats_data[header])
                 protoheader.store("diff_value", stats_data["diff_#{header}"])
                 protoheader.store("value_perc", stats_data["#{header}_perc"])
