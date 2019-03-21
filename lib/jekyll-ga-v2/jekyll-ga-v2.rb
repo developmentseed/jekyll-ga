@@ -42,7 +42,22 @@ module Jekyll
 
       # Now lets check for the cache file and how old it is
       if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and !ga["debug"]
-        @response_data = JSON.parse(File.read(cache_file_path));
+        # Inject from cache  
+        data = JSON.parse(File.read(cache_file_path))  
+          
+        # Into pages...
+        site.pages.each { |page|
+            page.data["stats"] = data["page-stats"][get_identifier_for("page", page)]
+        }  
+          
+        # Into posts...
+        site.posts.docs.each { |post|
+            post.data["stats"] = data["post-stats"][get_identifier_for("post", post)]
+        } 
+          
+        # Into site...
+        site.data["stats"] = data["site-stats"]
+          
       else
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
           
@@ -94,14 +109,11 @@ module Jekyll
         @headers = @response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
 
         # Loop through pages && posts to add the stats object value
-          
         page_data = {}
         site.pages.each { |page|
             stats_data = get_stats_for(ga, "page", page)
             page.data["stats"] = stats_data
             
-        
-
             # Jekyll.logger.info "GA-debug (stats-type): ", page.data["statistics"].class.to_s
 
             unless stats_data.nil?
@@ -201,7 +213,7 @@ module Jekyll
                     perc_value = present_value / past_value * 100.0
 
                     pre_data.store("diff_#{key}", diff_value)
-                    pre_data.store("#{key}_perc", perc_value == Float::INFINITY ? "∞" : perc_value.to_s)
+                    pre_data.store("#{key}_perc", perc_value == Float::INFINITY ? "∞" : (perc_value.nan? ? "0" : perc_value.to_s))
                 end
            }
 
