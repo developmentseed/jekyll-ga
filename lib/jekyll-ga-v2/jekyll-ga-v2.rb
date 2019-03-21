@@ -56,8 +56,7 @@ module Jekyll
         } 
           
         # Into site...
-        site.data["stats"] = data["site-stats"]
-          
+        site.data["stats"] = data["site-stats"] 
       else
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
           
@@ -86,8 +85,12 @@ module Jekyll
            start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
-           past_date = end_date.to_date - start_date.to_date            
-           @past_response = get_response(analytics, ga, queryString, start_date.to_date - past_date.numerator.to_i, start_date) 
+           diff_date = end_date.to_date - start_date.to_date
+           diff_date = diff_date.numerator.to_i
+            
+           site.data["period"] = diff_date    
+            
+           @past_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date, start_date) 
         end
 
         # If there are errors then show them
@@ -107,6 +110,7 @@ module Jekyll
           
         # Get keys from columnHeaders
         @headers = @response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
+        site.data["headers"] = @headers
 
         # Loop through pages && posts to add the stats object value
         page_data = {}
