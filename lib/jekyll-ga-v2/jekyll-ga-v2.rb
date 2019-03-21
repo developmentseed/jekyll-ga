@@ -51,8 +51,18 @@ module Jekyll
           
         # Jekyll.logger.info "GA-debug: ", site.static_files.to_json
         # Jekyll.logger.info "GA-debug: ", site.class.to_s
-        Jekyll.logger.info "GA-debug (pages): ", site.pages.select { |page| page.name.include? ".html" }.collect { |page| page.dir + page.name }
-        Jekyll.logger.info "GA-debug (posts): ", site.posts.docs.collect { |doc| doc.url.to_s }
+        
+        pages = site.pages.select { |page| page.name.include? ".html" }.collect { |page| filter_url(page.dir + page.name) }
+        posts = site.posts.docs.collect { |doc| filter_url(doc.url.to_s) }
+          
+        # Jekyll.logger.info "GA-debug (pages): ", pages
+        # Jekyll.logger.info "GA-debug (posts): ", posts
+          
+        pages.push(*posts)
+          
+        queryString = pages.collect { |page| "ga:pagePath==#{page.to_s}" }.join(",")
+          
+        # Jekyll.logger.info "Ga-debug (QueryString): ", queryString
           
         # With this we can collect all paths into "ga:pagePath==xxx" array of strings (after merging this two arrays)
         # Jekyll.logger.info "GA-debug (layouts): ", site.layouts[0].class.to_s #.to_json #.collect { |layout| layout.name }
@@ -66,9 +76,7 @@ module Jekyll
             Chronic.parse(ga['end']).strftime("%Y-%m-%d"),   # end_date
             ga['metric'],  # metrics
             dimensions: "ga:pagePath",
-            filters: ga["filters"].to_s.empty? ? "ga:pagePath==/,ga:pagePath==/es/" : ga["filters"].to_s, # TODO: gsub of :current_url (for this I'll need to load it on a < Page or < PageReader, I'll need to debug)
-                                                                                                          #       this will be a slow impl, so I'll search if is allowed to put all pages on the same filters string (so the macro will be called :url) (https://stackoverflow.com/a/22689880/3286975)
-                                                                                                          # "ga:pagePath==/,ga:pagePath==/es/" works as expected, so I have to recover all pages, I will not use the macro
+            filters: ga["filters"].to_s.empty? ? queryString : ga["filters"].to_s,
             include_empty_rows: nil,
             max_results: 10000, 
             output: nil, 
@@ -111,6 +119,19 @@ module Jekyll
         end
           
       end
+        
+    end
+      
+    def filter_url(url)
+        if url.include? ".html"
+          url = url.sub(".html", "")
+        end
+          
+        if url.include? "index"
+          url = url.sub("index", "")
+        end
+        
+        return url
     end
   end
 end
