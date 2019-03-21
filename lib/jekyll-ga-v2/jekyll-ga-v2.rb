@@ -6,6 +6,7 @@ require 'googleauth'
 require 'google/apis/analytics_v3'
 require 'chronic'
 require 'json'
+# require 'digest'
 
 module Jekyll
 
@@ -32,7 +33,7 @@ module Jekyll
       cache_filename = ga['cache_filename'] || "ga_cache.json"
       cache_file_path = cache_directory + "/" + cache_filename
 
-      # Set the refresh rate in minutes (how long the program will wait before writing a new file)
+      # Set the refresh rate in minutes (how long the program will wait in minutes before writing a new file)
       refresh_rate = ga['refresh_rate'] || 60
 
       # If the directory doesn't exist lets make it
@@ -40,7 +41,7 @@ module Jekyll
         Dir.mkdir(cache_directory)
       end
 
-      # Now lets check for the cache file and how old it is
+      # Now lets check for the cache file and how old it is (if it exceeds refesh_rate then update it)
       if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and !ga["debug"]
         # Inject from cache  
         data = JSON.parse(File.read(cache_file_path))  
@@ -57,6 +58,8 @@ module Jekyll
           
         # Into site...
         site.data["stats"] = data["site-stats"] 
+        site.data["period"] = data["period"]
+        site.data["headers"] = data["headers"]
       else
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
           
@@ -79,6 +82,9 @@ module Jekyll
         
         # Get the response
         response = get_response(analytics, ga, queryString)
+          
+        # Declare the hash where the info will go  
+        store_data = {}
         
         # Make another request to Google Analytics API to get the pasterence
         if ga["compare_period"]
@@ -88,7 +94,8 @@ module Jekyll
            diff_date = end_date.to_date - start_date.to_date
            diff_date = diff_date.numerator.to_i
             
-           site.data["period"] = diff_date    
+           site.data["period"] = diff_date
+           store_data.store("period", diff_date)
             
            @past_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date, start_date) 
         end
@@ -106,11 +113,8 @@ module Jekyll
 
         @response_data = response
           
-        store_data = {}
-          
         # Get keys from columnHeaders
         @headers = @response_data.column_headers.collect { |header| header.name.sub("ga:", "") }
-        site.data["headers"] = @headers
 
         # Loop through pages && posts to add the stats object value
         page_data = {}
@@ -154,9 +158,30 @@ module Jekyll
         unless stats_data.nil? and ga["debug"]
           Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
         end
+        
+        # Before saving modify headers
+        
+        new_headers = []
+        @headers.each { |header|
+            unless stats_data[header].nil?            
+                protoheader = {}
+
+                protoheader.store("value", stats_data[header])
+                protoheader.store("diff_value", stats_data["diff_#{header}"])
+                protoheader.store("value_perc", stats_data["#{header}_perc"])
+
+                new_headers.push(protoheader)
+            end
+        }
+          
+        # Then save...  
+        site.data["headers"] = new_headers
+        store_data.store("headers", new_headers)
 
         # Write the response data
-        if ((Time.now - File.mtime(cache_file_path)) / 60 < refresh_rate) and ga["debug"] or !ga["debug"]
+        # Jekyll.logger.info "GA-debug (minutes): ",((Time.now - File.mtime(cache_file_path)) / 60 >= refresh_rate)
+        
+        if File.exist?(cache_file_path) and ((Time.now - File.mtime(cache_file_path)) / 60 >= refresh_rate) and ga["debug"] or !ga["debug"] or !File.exist?(cache_file_path)
             File.open(cache_file_path, "w") do |f|
               f.write(JSON.pretty_generate(store_data))
             end
@@ -169,6 +194,10 @@ module Jekyll
 
       Jekyll.logger.info "Jekyll GoogleAnalytics:", "Initializated in #{endTime} seconds"
     end
+      
+    # def get_md5_sum(filepath)
+    #     return Digest::MD5.hexdigest(File.read(filepath))
+    # end
       
     def get_identifier_for(page_type, inst)
         if page_type == "page"
