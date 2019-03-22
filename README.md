@@ -71,7 +71,6 @@ jekyll_ga:
   dimensions: ga:pagePath   # Dimensions
   segment:                  # Optional
   filters:                  # Optional
-  sort: true                # Sort posts by this metric
   max_results: 10000        # Number of the maximum results get by the API
   debug: false              # Debug mode
 ```
@@ -80,7 +79,6 @@ jekyll_ga:
 * The `start` and `end` indicate the time range of data you want to query. They are parsed using Ruby's `Chronic` gem, so you can include relative or absolute dates, such as `now`, `yesterday`, `last month`, `2 weeks ago`. See [Chronic's documentation](https://github.com/mojombo/chronic#examples) for more options.
 * The `metrics` value is what you want to measure from your Google Analytics data. Usually this will be `ga:pageviews` or `ga:visits`, but it can be any metric available in Google Analytics. Specify only one. See the [Google Analytics Query Explorer](http://ga-dev-tools.appspot.com/explorer/?csw=1) to experiment with different metrics. (Your `dimension` should always be `ga:pagePath`). I recommend you the following string `ga:pageviews,ga:bounceRate,ga:sessions,ga:users,ga:newUsers`.
 * The `segment` and `filters` keys are optional parameters for your query. See the [Google Analytics Query Explorer](http://ga-dev-tools.appspot.com/explorer/?csw=1) for a description of how to use them, or just leave them out.
-* The `sort` key can be `true` or `false`. If `true`, your posts will be sorted first by your Google Analytics metic, then chronologically as is the default. If `false` or not specified, your posts will sort as usual.
 
 New params in v2:
 
