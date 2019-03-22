@@ -26,7 +26,7 @@ gem 'jekyll-ga-v2'
 - Turn on the Analytics API and accept the terms of service
 - Go to `API Access` on the left sidebar menu, create a new oauth 2.0 client ID, give your project a name, and click `next`.
 - Select Application type: `Service account`, and click `Create client ID`
-- note the private key's password. It will probably be `notasecret` unless Google changes something. You'll need to enter this value in your configuration settings.
+- note the private key's password. It will probably be `notasecret` unless Google changes something. You'll need to use this value to decrypt the PCKS12 file (later explanined).
 - Download the private key. Save this file because you can only download it once.
 - Note the `Email address` for the Service account. You'll need this for your configuration settings and in the next step.
 - Log into Google Analytics and add the service account email address as a user of your Google Analytics profile: From a report page, `Admin > select a profile > Users > New User`
