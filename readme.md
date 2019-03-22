@@ -215,7 +215,7 @@ Become a patron, by simply clicking on this button (**very appreciated!**):
 
 [![](https://c5.patreon.com/external/logo/become_a_patron_button.png)](https://www.patreon.com/z3nth10n)
 
-... Or if you prefer an one-time donation:
+... Or if you prefer a one-time donation:
 
 [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://paypal.me/z3nth10n)
 
