@@ -57,7 +57,7 @@ To configure `jekyll-ga-v2`, you need to specify some information about your Goo
 
 Add the following block to your Jekyll site's `_config.yml` file:
 
-```yml
+```yaml
 ####################
 # Google Analytics #
 ####################
@@ -85,6 +85,30 @@ jekyll_ga:
 New params in v2:
 
 * If `compare_period` is to true, then this will create two reports (**example:** if start is set to "last month", this will create one report from "end" to "start" and the second report its end will be at the start of the first report, with this data a comparation will be created).
+
+### Do you need to automatize this?
+
+Maybe you're thinking that you'll need to make a new push everytime you need to update your stats. And you're right, but CircleCI comes here again for the rescue. All you need is to [schedule a nightly build](https://circleci.com/docs/2.0/workflows/#nightly-example).
+
+Here is my own implementation on [my CircleCI.yml configuration, again](https://github.com/z3nth10n/z3nth10n.github.io/blob/b9f7ef42e5fce33800aab80f8eabe6868b38f8e5/circle.yml#L56).
+
+```yaml
+    nightly:
+        triggers:
+            - schedule:
+                cron: "0 0 * * *"
+                filters:
+                    branches:
+                        only:
+                            - gh-pages-ci
+                        ignore:
+                            - master
+        jobs:
+            - build:
+                context: "Google Analytics Sensitive Data"
+```
+
+Of course, you'll need to specify the context again.
 
 ### Need help for examples?
 
