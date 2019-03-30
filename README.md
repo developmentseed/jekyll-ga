@@ -221,4 +221,4 @@ Become a patron, by simply clicking on this button (**very appreciated!**):
 
 Copyright (c) 2019 z3nth10n (United Teamwork Association).
 
-License: MIT
+License: GNU General Public License v3.0
