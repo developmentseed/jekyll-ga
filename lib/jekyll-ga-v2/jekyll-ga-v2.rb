@@ -91,7 +91,7 @@ module Jekyll
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
            diff_date = end_date.to_date - start_date.to_date
-           diff_date = diff_date.numerator.to_i - 1
+           diff_date = diff_date.numerator.to_i
             
            site.data["period"] = diff_date
            store_data.store("period", diff_date)
