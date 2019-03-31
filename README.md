@@ -116,36 +116,47 @@ Look at those two HTML files I created to render my settings:
 <div id="genstats" class="col-md-3 align-sm-right vertical-margin order-xs-fourth col-xs-expand">
     <box class="both-offset expand-width">
         <p>
-            <h3>Statistics</h3>
-            <p>(last {{ site.data.period }} days)</p>
+            <h3>{% t 'stats-caption' %}</h3>
+            <p>({% t 'stats_last' %} {{ site.data.period }} {% t 'stats_days' %})</p>
         </p>
 
         {% for header in site.data.headers %}
         
             <p>
                 {% assign hvalue = header.value | plus: 0 %}
-                {{ hvalue | round }} {{ header.name }}
+                {% assign statname = 'stats_' | append: header.name %}
+                {{ hvalue | round }} {% t statname %}
             </p>
             <p class="sub">
                     {% if site.jekyll_ga.compare_period %}
                     (
-                    last {{ site.data.period }} days: 
+                    {% t 'stats_last' %} {{ site.data.period }} {% t 'stats_days' %}: 
                     {% if header.value_perc != "∞" %}
                         {% assign perc = header.value_perc | plus: 0 %}
 
-                        {% if perc > 0 %}
-                            <i class="fas fa-arrow-up color-green"></i>
-                        {% elsif perc == 0 %}
-                            <i class="fas fa-equals"></i>
-                        {% elsif perc < 0 %}
-                            <i class="fas fa-arrow-down color-red"></i>
+                        {% if header.name != "bounceRate" %}
+                            {% if perc > 0 %}
+                                <i class="fas fa-arrow-up color-green"></i>
+                            {% elsif perc == 0 %}
+                                <i class="fas fa-equals"></i>
+                            {% elsif perc < 0 %}
+                                <i class="fas fa-arrow-down color-red"></i>
+                            {% endif %}
+                        {% else %}
+                            {% if diff < 0 %}
+                                <i class="fas fa-arrow-up color-green"></i>
+                            {% elsif diff == 0 %}
+                                <i class="fas fa-equals"></i>
+                            {% elsif diff > 0 %}
+                                <i class="fas fa-arrow-down color-red"></i>
+                            {% endif %}
                         {% endif %}
 
                         {{ perc | round }} % | 
                         
                         {% assign diff = header.diff_value %}
                         {% if diff > 0 %}+{% endif %}
-                        {{ diff | round }} than last period
+                        {{ diff | round }}{% if header.name == "bounceRate" %}%{% endif %} {% t 'stats_last_period' %}
                     {% else %}
                     ∞ %    
                     {% endif %}
@@ -156,6 +167,25 @@ Look at those two HTML files I created to render my settings:
         {% endfor %}
     </box>
 </div>
+```
+
+**Note:** Keep in mind that this snippets make use of [jekyll-language-plugin](https://github.com/uta-org/jekyll-language-plugin), by this reason you'll need to replace all the `{% t ... %}` must be replaced by its equivalents:
+
+
+```yaml
+#########
+# Stats #
+#########
+
+stats-caption: 'Statistics'
+stats_pageviews: "views"
+stats_bounceRate: " % bounce rate"
+stats_sessions: "sessions"
+stats_users: "visitors"
+stats_newUsers: "new visitors"
+stats_last: 'last'
+stats_days: 'days'
+stats_last_period: 'than last period'
 ```
 
 This displays a box with the different metrics selected in your `metrics` configuration parameter:
