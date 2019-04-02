@@ -90,6 +90,14 @@ module Jekyll
            start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
            end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
             
+           if start_date.to_date > Date.today or end_date.to_date > Date.today
+              raiseError("Start or end date can't be on the future!") 
+           end
+            
+           if start_date.to_date > end_date.to_date
+              raiseError("Start can't be a posterior date to end!") 
+           end
+            
            diff_date = end_date.to_date - start_date.to_date
            diff_date = diff_date.numerator.to_i
             
@@ -287,6 +295,10 @@ module Jekyll
       
     def float?(string)
       true if Float(string) rescue false
+    end
+      
+    def raiseError(str)
+        raise RuntimeError, str
     end
   end
 end
