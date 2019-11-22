@@ -61,10 +61,21 @@ module Jekyll
         site.data["headers"] = data["headers"]
       else
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
+        # Google::Apis::AnalyticsreportingV4::AnalyticsReportingService.new
+
+        scopes = ['https://www.googleapis.com/auth/analytics.readonly']
           
-         # Load our credentials for the service account (using env vars)
+        # Load our credentials for the service account (using env vars)
+        # auth = Google::Auth.get_application_default(scopes)
         auth = ::Google::Auth::ServiceAccountCredentials
-            .make_creds(scope: 'https://www.googleapis.com/auth/analytics')
+                  .make_creds(scope: 'https://www.googleapis.com/auth/analytics')
+
+        # ::Google::Auth::ServiceAccountCredentials
+        #     .make_creds(
+        #       # scope: 'secret/client_secret.json'
+        #       json_key_io: File.open(File.join(__dir__, "client_secret.json"))
+        #     )
+            # .make_creds(scope: 'https://www.googleapis.com/auth/analytics')
           
         # Assign auth
         analytics.authorization = auth

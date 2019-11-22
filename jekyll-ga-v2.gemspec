@@ -17,9 +17,9 @@ Gem::Specification.new do |spec|
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r!^(test|spec|features|assets|versions)/!) }
   spec.require_paths = ["lib"]
     
-  spec.add_dependency "jekyll", "~> 3.0"
-  spec.add_dependency 'googleauth', '~> 0.8.0'
-  spec.add_dependency 'google-api-client', '~> 0.28.4'
+  spec.add_dependency "jekyll", "~> 4.0"
+  spec.add_dependency 'googleauth', '~> 0.10.0'
+  spec.add_dependency 'google-api-client', '~> 0.34.1'
   spec.add_dependency 'chronic', '~> 0.10.2'
  
   spec.add_development_dependency "rake", "~> 11.0"
