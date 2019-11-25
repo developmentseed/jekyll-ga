@@ -63,7 +63,7 @@ module Jekyll
         analytics = Google::Apis::AnalyticsV3::AnalyticsService.new
         # Google::Apis::AnalyticsreportingV4::AnalyticsReportingService.new
 
-        scopes = ['https://www.googleapis.com/auth/analytics.readonly']
+        # scopes = ['https://www.googleapis.com/auth/analytics.readonly']
           
         # Load our credentials for the service account (using env vars)
         # auth = Google::Auth.get_application_default(scopes)
@@ -92,30 +92,40 @@ module Jekyll
         
         # Get the response
         response = get_response(analytics, ga, queryString)
+
+        # Jekyll.logger.info "xxx: ", response.to_json
+        # Jekyll.logger.info "xxx rows: ", response.to_json
+
+
+        # Jekyll.logger.info "xxx: ", response
           
         # Declare the hash where the info will go  
         store_data = {}
         
         # Make another request to Google Analytics API to get the pasterence
         if ga["compare_period"]
-           start_date = Chronic.parse(ga['start']).strftime("%Y-%m-%d")
-           end_date = Chronic.parse(ga['end']).strftime("%Y-%m-%d")
-            
-           if start_date.to_date > Date.today or end_date.to_date > Date.today
-              raiseError("Start or end date can't be on the future!") 
+           start_date = Chronic.parse(ga['start']).to_date
+           end_date = Chronic.parse(ga['end']).to_date
+
+           startdateStr = start_date.strftime("%Y-%m-%d")
+           enddateStr = end_date.strftime("%Y-%m-%d")
+
+           if start_date > DateTime.now or end_date > DateTime.now
+              raiseError("Start or end date can't be on the future! Start date: " + startdateStr + "; End date: " + enddateStr) 
            end
             
-           if start_date.to_date > end_date.to_date
-              raiseError("Start can't be a posterior date to end!") 
+           if start_date > end_date
+              raiseError("Start can't be a posterior date to end! Start date: " + startdateStr + "; End date: " + enddateStr) 
            end
             
-           diff_date = end_date.to_date - start_date.to_date
+           diff_date = end_date - start_date
            diff_date = diff_date.numerator.to_i
             
            site.data["period"] = diff_date
            store_data.store("period", diff_date)
-            
-           @past_response = get_response(analytics, ga, queryString, start_date.to_date - diff_date, start_date) 
+          
+           responseDiffDate = (start_date - diff_date).strftime("%Y-%m-%d")
+           @past_response = get_response(analytics, ga, queryString, responseDiffDate, startdateStr) 
         end
 
         # If there are errors then show them
@@ -176,6 +186,11 @@ module Jekyll
         if !stats_data.nil? and ga["debug"]
           Jekyll.logger.info "GA-debug (site-stats): ", site.data["stats"].to_json
         end
+
+        # TODO: Return 0
+        if stats_data.nil?
+            return nil
+        end
         
         # Before saving modify headers
         
@@ -223,6 +238,10 @@ module Jekyll
        data = nil
        past_data = nil
         
+       if @response_data.rows.nil?
+          return nil
+       end
+
        # Transpose array into hash using columnHeaders    
        if page_type == "page"
           data = @response_data.rows.select { |row| row[0] == filter_url(inst.dir + inst.name) }.collect { |row| Hash[ [@headers, row].transpose ] }[0]
