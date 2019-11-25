@@ -1,0 +1,11 @@
+deploy:
+  provider: rubygems
+  gem: jekyll-ga-v2
+  on:
+    tags: true
+    all_branches: true
+    repo: uta-org/jekyll-ga-v2
+language: ruby
+rvm:
+  - 2.3.1
+script: JEKYLL_ENV="production" bundle exec rspec spec
